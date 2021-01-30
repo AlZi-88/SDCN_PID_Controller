@@ -38,10 +38,10 @@ class PID {
   double p_error;
   double i_error;
   double d_error;
-
+  double cte_old;
   /**
    * PID Coefficients
-   */ 
+   */
   double Kp;
   double Ki;
   double Kd;
