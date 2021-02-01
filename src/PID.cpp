@@ -24,8 +24,8 @@ void PID::Init(double Kp_, double Ki_, double Kd_) {
     * PID Coefficients
     */
    Kp = Kp_;
-   Ki = Kd_;
-   Kd = Ki_;
+   Ki = Ki_;
+   Kd = Kd_;
 }
 
 void PID::UpdateError(double cte) {
@@ -34,8 +34,9 @@ void PID::UpdateError(double cte) {
    */
 
    p_error = cte;
-   i_error += cte*.02;
-   d_error = (cte-cte_old)/.02;
+   i_error += cte;
+   d_error = (cte-cte_old);
+   cte_old = cte;
 
 }
 
@@ -44,7 +45,7 @@ double PID::TotalError() {
    * TODO: Calculate and return the total error
    */
    double total_error;
-   total_error = - Kp*p_error - Kd*d_error - Ki*i_error;
-   std::cout << "tatal_error = " << total_error << "Kp = " << Kp << "Kd = " << Kd << "Ki = " << Ki << std::endl;
+   total_error = (-1.0)*Kp*p_error - Kd*d_error - Ki*i_error;
+   std::cout << "total_error = " << total_error << ", Kp = " << Kp << ", Kd = " << Kd << ", Ki = " << Ki << std::endl;
   return total_error;  // TODO: Add your total error calc here!
 }

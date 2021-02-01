@@ -12,7 +12,12 @@ class PID {
    * Destructor.
    */
   virtual ~PID();
-
+  /**
+   * PID Coefficients
+   */
+  double Kp;
+  double Ki;
+  double Kd;
   /**
    * Initialize PID.
    * @param (Kp_, Ki_, Kd_) The initial PID coefficients
@@ -39,12 +44,7 @@ class PID {
   double i_error;
   double d_error;
   double cte_old;
-  /**
-   * PID Coefficients
-   */
-  double Kp;
-  double Ki;
-  double Kd;
+
 };
 
 #endif  // PID_H
