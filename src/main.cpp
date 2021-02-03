@@ -67,15 +67,16 @@ int main() {
   uWS::Hub h;
 
   PID pid_steer;
-  PID pid_speed;
+  //PID pid_speed;
   /**
    * TODO: Initialize the pid variable.
    */
    pid_steer.Init(0.27 , 0.001, 3.5);
-   pid_speed.Init(0.0, 0.0, 0.0);
+   Twiddle twiddle(true);
+   //pid_speed.Init(0.0, 0.0, 0.0);
 
 
-  h.onMessage([&pid_steer, &pid_speed](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length,
+  h.onMessage([&pid_steer, &twiddle](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length,
                      uWS::OpCode opCode) {
     // "42" at the start of the message means there's a websocket message event.
     // The 4 signifies a websocket message
@@ -97,6 +98,62 @@ int main() {
           double throttle;
           double brake;
 
+          if (twiddle.is_used && twiddle.sum_dp < 0.00001){
+            //stop Twiddle
+            twiddle.is_used = false;
+          }
+
+          if (twiddle.is_used){
+
+            twiddle.distance += 1;
+
+            twiddle.error_sum = cte*cte;
+            twiddle.error_av = twiddle.error_sum/twiddle.distance;
+
+            //first let the car drive a bit then start twiddle
+            // after check if car is stuck or maximum distance is reached
+            if (twiddle.distance > 100 && (twiddle.distance >= 50000 || std::fabs(cte) > 3.5 || speed <= 0.1)){
+
+              if (!twiddle.init_done){
+                twiddle.Init(pid_steer);
+              }else{
+                if (twiddle.error_av < twiddle.best_error && twiddle.distance > twiddle.best_distance){
+                  twiddle.new_best_err();
+
+                  //next parameter
+                  twiddle.parameter_index += 1;
+                  twiddle.parameter_index = twiddle.parameter_index%3;
+
+                } else{
+                  if (twiddle.update_factor != -2.0){
+                    //decreasing update not yet done
+                    twiddle.update_p(-2.0);
+                    twiddle.update_pid(pid_steer);
+                  } else{
+                    //neither increasing nor decresing result in better update -> reest to initial values
+                    twiddle.no_new_best_err();
+                    twiddle.update_pid(pid_steer);
+
+                    //next parameter
+                    twiddle.parameter_index += 1;
+                    twiddle.parameter_index = twiddle.parameter_index%3;
+                  }
+
+                }
+              }
+              if (twiddle.update_factor == 1.0){
+                twiddle.update_p(1.0);
+                twiddle.update_pid(pid_steer);
+              }
+
+            twiddle.distance = 0;
+            twiddle.error_sum = 0;
+            twiddle.error_av = 0;
+
+            resetSim(ws);
+          }
+
+          }
           run(pid_steer, cte, ws);
 
 

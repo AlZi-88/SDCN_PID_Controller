@@ -2,9 +2,12 @@
 #ifndef TWIDDLE_H
 #define TWIDDLE_H
 
+#include "PID.h"
+#include <vector>
+
 class Twiddle{
 public:
-  Twiddle();
+  Twiddle(bool activate);
 
   virtual ~Twiddle();
 
@@ -19,18 +22,24 @@ public:
   void update_pid(PID &pid);
   void Init(PID &pid);
 
-private:
-
   int distance;
+  int best_distance;
   bool is_used;
-  double error;
+  bool init_done;
+  double error_sum;
   double best_error;
   double error_av;
-  std::vector<double> dp;
-  double sum_dp;
-  int parameter_index;
-  std::vector<double> p;
 
+  double sum_dp;
+  double update_factor;
+  int parameter_index;
+
+
+
+private:
+
+  std::vector<double> p;
+  std::vector<double> dp;
 
 };
 
