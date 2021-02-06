@@ -71,8 +71,8 @@ int main() {
   /**
    * TODO: Initialize the pid variable.
    */
-   pid_steer.Init(0.27 , 0.001, 3.5);
-   Twiddle twiddle(true);
+   pid_steer.Init(0.191657 , 0.000401418, 3.70017);
+   Twiddle twiddle(false, pid_steer);
    //pid_speed.Init(0.0, 0.0, 0.0);
 
 
@@ -98,39 +98,41 @@ int main() {
           double throttle;
           double brake;
 
-          if (twiddle.is_used && twiddle.sum_dp < 0.00001){
+          if (twiddle.is_used && twiddle.sum_dp < 0.0000000001){
             //stop Twiddle
             twiddle.is_used = false;
+            std::cout << "Congratualtions!! Optimum parameter found!" << std::endl;
+            twiddle.print_status();
           }
 
           if (twiddle.is_used){
 
             twiddle.distance += 1;
 
-            twiddle.error_sum = cte*cte;
+            twiddle.error_sum += cte*cte;
             twiddle.error_av = twiddle.error_sum/twiddle.distance;
-
+            std::cout << "Distance = " << twiddle.distance << std::endl;
+            std::cout << "Tuning parameter = " << twiddle.parameter_index << std::endl;
+            twiddle.print_status();
             //first let the car drive a bit then start twiddle
             // after check if car is stuck or maximum distance is reached
-            if (twiddle.distance > 100 && (twiddle.distance >= 50000 || std::fabs(cte) > 3.5 || speed <= 0.1)){
-
+            if (twiddle.distance > 100 && (twiddle.distance >= 11000/*apprx 1 lap*/ || std::fabs(cte) > 3.5 || speed <= 0.1)){
+              //car completed one lap or is crashed, so performance could be evaluated
               if (!twiddle.init_done){
-                twiddle.Init(pid_steer);
+                twiddle.Init_Reference();
               }else{
-                if (twiddle.error_av < twiddle.best_error && twiddle.distance > twiddle.best_distance){
+                if (twiddle.error_av < twiddle.best_error && twiddle.distance >= twiddle.best_distance){
                   twiddle.new_best_err();
 
-                  //next parameter
-                  twiddle.parameter_index += 1;
-                  twiddle.parameter_index = twiddle.parameter_index%3;
-
                 } else{
-                  if (twiddle.update_factor != -2.0){
+                  if (twiddle.increase_p[twiddle.parameter_index]){
                     //decreasing update not yet done
-                    twiddle.update_p(-2.0);
+                    twiddle.increase_p[twiddle.parameter_index] = false;
+                    twiddle.update_p();
                     twiddle.update_pid(pid_steer);
                   } else{
                     //neither increasing nor decresing result in better update -> reest to initial values
+                    twiddle.increase_p[twiddle.parameter_index] = true;
                     twiddle.no_new_best_err();
                     twiddle.update_pid(pid_steer);
 
@@ -141,8 +143,8 @@ int main() {
 
                 }
               }
-              if (twiddle.update_factor == 1.0){
-                twiddle.update_p(1.0);
+              if (twiddle.increase_p[twiddle.parameter_index]){
+                twiddle.update_p();
                 twiddle.update_pid(pid_steer);
               }
 
@@ -156,14 +158,14 @@ int main() {
           }
           run(pid_steer, cte, ws);
 
-
+        }
       } else {
         // Manual driving
         string msg = "42[\"manual\",{}]";
         ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
       }
     }  // end websocket message if
-  }
+
   }); // end h.onMessage
 
   h.onConnection([&h](uWS::WebSocket<uWS::SERVER> ws, uWS::HttpRequest req) {
